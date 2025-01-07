@@ -33,3 +33,10 @@ class SettlementAdmin(admin.ModelAdmin):
     list_filter = ('payment_status', 'settlement_method')
 
 admin.site.register(Settlement, SettlementAdmin)
+
+
+from .models import IndividualExpense
+
+@admin.register(IndividualExpense)
+class IndividualExpenseAdmin(admin.ModelAdmin):
+    list_display = ('expense', 'member', 'amount', 'is_paid')

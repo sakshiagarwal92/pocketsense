@@ -3,9 +3,12 @@
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from .models import Expense, Group, Category, Settlement
+from .models import Expense, Group, Category, Settlement, IndividualExpense
 from .serializers import ExpenseSerializer, GroupSerializer, CategorySerializer, SettlementSerializer
 from rest_framework.permissions import IsAuthenticated
+from django.utils import timezone
+from django.db import models
+from datetime import datetime
 
 class ExpenseViewSet(viewsets.ModelViewSet):
     queryset = Expense.objects.all()
@@ -20,37 +23,58 @@ class ExpenseViewSet(viewsets.ModelViewSet):
         category_id = request.data.get('category')
         split_type = request.data.get('split_type')
         group_id = request.data.get('group')
-        
+
         # Handle the logic to create and split expenses.
-        # Add your custom logic for equal or unequal split here.
-        
         group = Group.objects.get(id=group_id)
-        
-        # Expense creation
+
+        # Ensure the date is a string and in the correct format
+        date_str = request.data.get('date', None)
+        if date_str:
+            try:
+                date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
+            except ValueError:
+                return Response({"error": "Invalid date format, expected YYYY-MM-DD"}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            date_obj = timezone.now().date()  # Use the current date if not provided
+
+        # Ensure the group has members before creating the expense
+        members = group.members.all()
+        if not members:
+            return Response(
+                {"error": "Group has no members to split the expense."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Create the expense object and set created_by to the current user
         expense = Expense.objects.create(
             amount=amount,
             category_id=category_id,
             split_type=split_type,
             group=group,
-            created_by=request.user
+            created_by=request.user,  # Automatically assign the authenticated user
+            date=date_obj  # Use the validated or default date
         )
-        
-        # Splitting logic
+
+        # Handle splitting logic
         if split_type == 'equal':
             # Split amount equally among all group members
-            members = group.members.all()
             per_member_share = amount / len(members)
             for member in members:
                 # Logic to add individual expense share for each member
-                # For now, you could add an entry in a new model for each member's share
-                pass  # Add logic for saving individual shares
-        
+                # For example:
+                IndividualExpense.objects.create(
+                    expense=expense,
+                    member=member,
+                    amount=per_member_share
+                )
         elif split_type == 'unequal':
             # Handle custom splitting logic if needed
-            # For now, we can return a placeholder response
-            pass
-        
-        return super().create(request, *args, **kwargs)
+            pass  # Add logic for unequal splitting if required
+
+        # Return the created expense details
+        serializer = self.get_serializer(expense)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
 
 
 class GroupViewSet(viewsets.ModelViewSet):

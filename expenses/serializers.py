@@ -1,5 +1,6 @@
 # expenses/serializers.py
 
+from datetime import datetime, timezone
 from rest_framework import serializers
 from .models import Expense, Group, Category, Settlement, User
 
@@ -7,7 +8,9 @@ class ExpenseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Expense
         fields = ['id', 'amount', 'category', 'split_type', 'date', 'receipt_image', 'created_by', 'group']
-
+        extra_kwargs = {
+            'created_by': {'read_only': True},
+        }
     def validate_amount(self, value):
         if value <= 0:
             raise serializers.ValidationError("Amount must be greater than 0.")
@@ -17,6 +20,12 @@ class ExpenseSerializer(serializers.ModelSerializer):
         # You could add other custom validations based on split_type, group, etc.
         return data
 
+    def create(self, validated_data):
+        # Ensure the date field is set if it's missing
+        if 'date' not in validated_data:
+            validated_data['date'] = datetime.now()  # Or set a default date here
+        return super().create(validated_data)
+    
 class GroupSerializer(serializers.ModelSerializer):
     class Meta:
         model = Group
