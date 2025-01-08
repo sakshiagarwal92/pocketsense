@@ -1,5 +1,3 @@
-# expenses/serializers.py
-
 from datetime import datetime, timezone
 from rest_framework import serializers
 from .models import Expense, Group, Category, Settlement, User
@@ -17,13 +15,11 @@ class ExpenseSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, data):
-        # You could add other custom validations based on split_type, group, etc.
         return data
 
     def create(self, validated_data):
-        # Ensure the date field is set if it's missing
         if 'date' not in validated_data:
-            validated_data['date'] = datetime.now()  # Or set a default date here
+            validated_data['date'] = datetime.now()  
         return super().create(validated_data)
     
 class GroupSerializer(serializers.ModelSerializer):

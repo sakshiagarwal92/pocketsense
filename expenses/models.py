@@ -4,12 +4,10 @@ from django.utils import timezone
 
 
 class User(AbstractUser):
-    # Add your custom fields here
     college = models.CharField(max_length=255, blank=True, null=True)
     semester = models.IntegerField(blank=True, null=True)
     default_payment_methods = models.CharField(max_length=255, blank=True, null=True)
 
-    # Override groups and permissions relationships to avoid clashes
     groups = models.ManyToManyField(
         'auth.Group',
         related_name='custom_user_set',

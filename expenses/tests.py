@@ -1,4 +1,4 @@
-# expenses/tests.py
+
 
 from rest_framework.test import APITestCase
 from rest_framework import status
@@ -15,7 +15,7 @@ class ExpenseAPITestCase(APITestCase):
         self.client.force_authenticate(user=self.user)
         data = {
             "amount": 100,
-            "category": 1,  # Assuming category with id 1 exists
+            "category": 1,  
             "split_type": "equal",
             "date": "2025-01-01",
             "group": self.group.id,

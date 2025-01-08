@@ -1,5 +1,3 @@
-# expenses/views.py
-
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
@@ -24,10 +22,8 @@ class ExpenseViewSet(viewsets.ModelViewSet):
         split_type = request.data.get('split_type')
         group_id = request.data.get('group')
 
-        # Handle the logic to create and split expenses.
         group = Group.objects.get(id=group_id)
 
-        # Ensure the date is a string and in the correct format
         date_str = request.data.get('date', None)
         if date_str:
             try:
@@ -35,9 +31,8 @@ class ExpenseViewSet(viewsets.ModelViewSet):
             except ValueError:
                 return Response({"error": "Invalid date format, expected YYYY-MM-DD"}, status=status.HTTP_400_BAD_REQUEST)
         else:
-            date_obj = timezone.now().date()  # Use the current date if not provided
+            date_obj = timezone.now().date()  
 
-        # Ensure the group has members before creating the expense
         members = group.members.all()
         if not members:
             return Response(
@@ -45,33 +40,27 @@ class ExpenseViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Create the expense object and set created_by to the current user
         expense = Expense.objects.create(
             amount=amount,
             category_id=category_id,
             split_type=split_type,
             group=group,
-            created_by=request.user,  # Automatically assign the authenticated user
-            date=date_obj  # Use the validated or default date
+            created_by=request.user, 
+            date=date_obj  
         )
 
-        # Handle splitting logic
         if split_type == 'equal':
-            # Split amount equally among all group members
             per_member_share = amount / len(members)
             for member in members:
-                # Logic to add individual expense share for each member
-                # For example:
+               
                 IndividualExpense.objects.create(
                     expense=expense,
                     member=member,
                     amount=per_member_share
                 )
         elif split_type == 'unequal':
-            # Handle custom splitting logic if needed
-            pass  # Add logic for unequal splitting if required
+            pass  
 
-        # Return the created expense details
         serializer = self.get_serializer(expense)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -87,7 +76,6 @@ class GroupViewSet(viewsets.ModelViewSet):
         group = self.get_object()
         user_id = request.data.get('user')
 
-        # Ensure the user exists and is not already a member
         try:
             user = User.objects.get(id=user_id)
         except User.DoesNotExist:
@@ -113,16 +101,12 @@ class SettlementViewSet(viewsets.ModelViewSet):
     def settle_expense(self, request, pk=None):
         settlement = self.get_object()
         
-        # Check if the settlement is already completed
         if settlement.payment_status == 'completed':
             return Response({'error': 'Expense already settled'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Update payment status to 'completed'
         settlement.payment_status = 'completed'
         settlement.save()
         
-        # Optionally, update the related expense's settlement status or other related models
         expense = settlement.expense
-        # Perform additional logic (e.g., updating expense's status or creating records)
         
         return Response({'status': 'Settlement completed'}, status=status.HTTP_200_OK)
